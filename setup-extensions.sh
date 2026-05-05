@@ -1,12 +1,10 @@
 #!/bin/bash
 
 # --- 1. DEEP CLEANING PHASE ---
-echo "Starting Deep Clean: Removing all current extensions and themes..."
-
-# Remove all local user extensions
+echo "Deep Cleaning: Removing existing extensions..."
 rm -rf "$HOME/.local/share/gnome-shell/extensions/*"
 
-# Purge major system extensions to ensure fresh versions
+# Purge system packages (Internal sudo used here)
 sudo apt purge -y \
     gnome-shell-extension-dashtodock \
     gnome-shell-extension-dash-to-panel \
@@ -19,12 +17,15 @@ sudo apt autoremove -y
 echo "Installing setup dependencies..."
 sudo apt update && sudo apt install -y \
     pipx \
+    dbus-x11 \
+    gnome-shell-extension-prefs \
     gnome-shell-extension-manager \
     gnome-shell-extensions \
     gnome-shell-extensions-extra
 
-# Install gext CLI for web-based extensions
+# Install gext CLI for the user (No sudo for pipx)
 pipx install gnome-extensions-cli --system-site-packages --force
+pipx ensurepath
 export PATH="$PATH:$HOME/.local/bin"
 
 # --- 3. GLOBAL THEME INSTALLATION ---
@@ -36,48 +37,60 @@ sudo mkdir -p /usr/share/themes
 if [ -d "$SCRIPT_DIR/$THEME_NAME" ]; then
     sudo rm -rf "/usr/share/themes/$THEME_NAME"
     sudo cp -r "$SCRIPT_DIR/$THEME_NAME" /usr/share/themes/
-else
-    echo "Error: Theme folder not found in $SCRIPT_DIR"
 fi
 
-# --- 4. MASS INSTALL ALL EXTENSIONS (34 Total) ---
+# --- 4. MASS INSTALL ALL EXTENSIONS ---
 all_extensions=(
-    "azclock@azclock.gitlab.com" "desktop-widgets@NiffirgkcaJ.github.com" "add-to-desktop@tommimon.github.com"
+    "azclock@://gitlab.com" "desktop-widgets@://github.com" "add-to-desktop@://github.com"
     "logowidget@github.com.howbea" "ubuntu-appindicators@ubuntu.com" "arcmenu@arcmenu.com"
-    "blur-my-shell@aunetx" "caffeine@patapon.info" "dash-to-panel@jderose9.github.com"
-    "dash-to-dock@micxgx.gmail.com" "ding@rastersoft.com" "GPaste@gnome-shell-extensions.gnome.org"
-    "gsconnect@andyholmes.github.io" "system-monitor@gnome-shell-extensions.gcampax.github.com"
+    "blur-my-shell@aunetx" "caffeine@patapon.info" "dash-to-panel@://github.com"
+    "dash-to-dock@://gmail.com" "ding@rastersoft.com" "GPaste@gnome-shell-extensions.gnome.org"
+    "gsconnect@andyholmes.github.io" "system-monitor@://github.com"
     "tiling-assistant@leleat-on-github" "disable-workspace-switcher@jbradaric.me" "hibernate-status@dromi"
-    "just-perfection-desktop@just-perfection" "middleclickclose@paolo.tranquilli.gmail.com" "no-overview@fthx"
-    "vertical-workspaces@G-dH.github.com" "apps-menu@gnome-shell-extensions.gcampax.github.com"
-    "places-menu@gnome-shell-extensions.gcampax.github.com" "launch-new-instance@gnome-shell-extensions.gcampax.github.com"
-    "window-list@gnome-shell-extensions.gcampax.github.com" "auto-move-windows@gnome-shell-extensions.gcampax.github.com"
-    "drive-menu@gnome-shell-extensions.gcampax.github.com" "light-style@gnome-shell-extensions.gcampax.github.com"
-    "native-window-placement@gnome-shell-extensions.gcampax.github.com" "screenshot-window-sizer@gnome-shell-extensions.gcampax.github.com"
-    "user-theme@gnome-shell-extensions.gcampax.github.com" "windowsNavigator@gnome-shell-extensions.gcampax.github.com"
-    "workspace-indicator@gnome-shell-extensions.gcampax.github.com" "revolutionary@jbellue.github.io"
+    "just-perfection-desktop@just-perfection" "middleclickclose@://gmail.com" "no-overview@fthx"
+    "vertical-workspaces@://github.com" "apps-menu@://github.com"
+    "places-menu@://github.com" "launch-new-instance@://github.com"
+    "window-list@://github.com" "auto-move-windows@://github.com"
+    "drive-menu@://github.com" "light-style@://github.com"
+    "native-window-placement@://github.com" "screenshot-window-sizer@://github.com"
+    "user-theme@://github.com" "windowsNavigator@://github.com"
+    "workspace-indicator@://github.com"
 )
 
-echo "Downloading and installing extensions from web/repo..."
+echo "Downloading and installing all extensions..."
 for uuid in "${all_extensions[@]}"; do
-    gext install "$uuid" --quiet 2>/dev/null
+    # Run gext as user
+    ~/.local/bin/gext install "$uuid" --quiet 2>/dev/null
 done
 
-# --- 5. THE ULTIMATE ENABLE (ONE COMMAND) ---
-# We use your exact 'ENABLED LIST' from your system logs
-ACTIVE_LIST="['caffeine@patapon.info', 'hibernate-status@dromi', 'revolutionary@jbellue.github.io', 'add-to-desktop@tommimon.github.com', 'GPaste@gnome-shell-extensions.gnome.org', 'ding@rastersoft.com', 'drive-menu@gnome-shell-extensions.gcampax.github.com', 'system-monitor@gnome-shell-extensions.gcampax.github.com', 'tiling-assistant@leleat-on-github', 'vertical-workspaces@G-dH.github.com', 'logowidget@github.com.howbea', 'desktop-widgets@NiffirgkcaJ.github.com', 'dash-to-panel@jderose9.github.com', 'user-theme@gnome-shell-extensions.gcampax.github.com']"
+# --- 5. SYNC ENABLED LIST ---
+ACTIVE_LIST="[ \
+'add-to-desktop@://github.com', \
+'logowidget@github.com.howbea', \
+'desktop-widgets@://github.com', \
+'caffeine@patapon.info', \
+'dash-to-panel@://github.com', \
+'ding@rastersoft.com', \
+'GPaste@gnome-shell-extensions.gnome.org', \
+'hibernate-status@dromi', \
+'drive-menu@://github.com', \
+'system-monitor@://github.com', \
+'tiling-assistant@leleat-on-github', \
+'user-theme@://github.com', \
+'vertical-workspaces@://github.com' \
+]"
 
-echo "Applying your active extension list and shell theme..."
+echo "Activating synced extensions and theme..."
+# These MUST run as user, not root
 gsettings set org.gnome.shell disable-user-extensions false
 gsettings set org.gnome.shell enabled-extensions "$ACTIVE_LIST"
 gsettings set org.gnome.shell.extensions.user-theme name "$THEME_NAME"
 
-# --- 6. GRUB REPLICATION ---
+# --- 6. GRUB ---
 echo "Applying GRUB Console Mode..."
 sudo sed -i 's/^#\?GRUB_TERMINAL=.*/GRUB_TERMINAL=console/' /etc/default/grub
 sudo update-grub
 
 echo "-------------------------------------------------------"
-echo "Setup finished! Global theme and all extensions ready."
-echo "CRITICAL: Log out and log back in to activate changes."
+echo "Setup Complete! Logout and Login to refresh GNOME."
 echo "-------------------------------------------------------"
