@@ -1,24 +1,53 @@
 #!/bin/bash
 
-# --- 1. CLEANING PHASE ---
-echo "Cleaning old extension files..."
+# --- 1. LIMPIEZA Y PREPARACIÓN ---
+echo "Limpiando entorno y preparando instalación..."
 rm -rf "$HOME/.local/share/gnome-shell/extensions/*"
 
-# --- 2. INSTALL SYSTEM PACKAGES ---
-echo "Installing dependencies..."
+# --- 2. INSTALACIÓN POR APT (REPOSITORIOS DEBIAN) ---
+# He corregido los nombres para que coincidan con los paquetes reales de Debian 13
+echo "Instalando paquetes desde repositorios oficiales..."
 sudo apt update && sudo apt install -y \
-    pipx \
-    dbus-x11 \
-    gnome-shell-extension-prefs \
     gnome-shell-extension-manager \
+    gnome-shell-extension-prefs \
+    gnome-shell-extension-dashtodock \
+    gnome-shell-extension-dash-to-panel \
+    gnome-shell-extension-desktop-icons-ng \
+    gnome-shell-extension-appindicator \
+    gnome-shell-extension-arc-menu \
+    gnome-shell-extension-gsconnect \
+    gnome-shell-extension-gpaste \
     gnome-shell-extensions \
-    gnome-shell-extensions-extra
+    gnome-shell-extensions-extra \
+    gir1.2-gnomedesktop-3.0 \
+    gir1.2-gnomedesktop-4.0 \
+    pipx dbus-x11
 
-# Ensure gext is installed for the current user
+# --- 3. CONFIGURACIÓN DE GEXT (PARA LO QUE NO ESTÁ EN APT) ---
 pipx install gnome-extensions-cli --system-site-packages --force
 export PATH="$PATH:$HOME/.local/bin"
 
-# --- 3. THEME INSTALLATION ---
+# --- 4. INSTALACIÓN DE FAVORITOS (TIENDA GNOME) ---
+# Estas suelen no estar en APT o ser versiones muy viejas, mejor bajarlas directo
+web_favorites=(
+    "tiling-assistant@leleat-on-github"
+    "search-light@://github.com"
+    "blur-my-shell@aunetx"
+    "caffeine@patapon.info"
+    "system-monitor@://github.com"
+    "desktop-widgets@://github.com"
+    "logowidget@github.com.howbea"
+    "add-to-desktop@://github.com"
+    "hibernate-status@dromi"
+    "vertical-workspaces@://github.com"
+)
+
+echo "Instalando favoritos desde GNOME Extensions..."
+for uuid in "${web_favorites[@]}"; do
+    ~/.local/bin/gext install "$uuid" --quiet 2>/dev/null
+done
+
+# --- 5. INSTALACIÓN GLOBAL DEL TEMA ---
 THEME_NAME="flat-remux-dark-fullpanel"
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE}")" &> /dev/null && pwd)
 sudo mkdir -p /usr/share/themes
@@ -27,45 +56,36 @@ if [ -d "$SCRIPT_DIR/$THEME_NAME" ]; then
     sudo cp -r "$SCRIPT_DIR/$THEME_NAME" /usr/share/themes/
 fi
 
-# --- 4. INSTALL ALL EXTENSIONS ---
-all_extensions=(
-    "azclock@://gitlab.com" "desktop-widgets@NiffirgkcaJ.github.com" "add-to-desktop@tommimon.github.com"
-    "logowidget@github.com.howbea" "ubuntu-appindicators@ubuntu.com" "arcmenu@arcmenu.com"
-    "blur-my-shell@aunetx" "caffeine@patapon.info" "dash-to-panel@jderose9.github.com"
-    "dash-to-dock@://gmail.com" "ding@rastersoft.com" "GPaste@gnome-shell-extensions.gnome.org"
-    "gsconnect@andyholmes.github.io" "system-monitor@gnome-shell-extensions.gcampax.github.com"
-    "tiling-assistant@leleat-on-github" "disable-workspace-switcher@jbradaric.me" "hibernate-status@dromi"
-    "just-perfection-desktop@just-perfection" "middleclickclose@://gmail.com" "no-overview@fthx"
-    "vertical-workspaces@G-dH.github.com" "apps-menu@gnome-shell-extensions.gcampax.github.com"
-    "places-menu@gnome-shell-extensions.gcampax.github.com" "launch-new-instance@gnome-shell-extensions.gcampax.github.com"
-    "window-list@gnome-shell-extensions.gcampax.github.com" "auto-move-windows@gnome-shell-extensions.gcampax.github.com"
-    "drive-menu@gnome-shell-extensions.gcampax.github.com" "light-style@gnome-shell-extensions.gcampax.github.com"
-    "native-window-placement@gnome-shell-extensions.gcampax.github.com" "screenshot-window-sizer@gnome-shell-extensions.gcampax.github.com"
-    "user-theme@gnome-shell-extensions.gcampax.github.com" "windowsNavigator@gnome-shell-extensions.gcampax.github.com"
-    "workspace-indicator@gnome-shell-extensions.gcampax.github.com"
-)
+# --- 6. ACTIVACIÓN SINCRONIZADA (TUS AZULES) ---
+# He incluido 'search-light' y 'blur-my-shell' en la lista de activas
+ACTIVE_LIST="[ \
+'add-to-desktop@://github.com', \
+'logowidget@github.com.howbea', \
+'desktop-widgets@://github.com', \
+'caffeine@patapon.info', \
+'dash-to-panel@://github.com', \
+'ding@rastersoft.com', \
+'GPaste@gnome-shell-extensions.gnome.org', \
+'hibernate-status@dromi', \
+'system-monitor@://github.com', \
+'tiling-assistant@leleat-on-github', \
+'user-theme@://github.com', \
+'vertical-workspaces@://github.com', \
+'blur-my-shell@aunetx', \
+'search-light@://github.com' \
+]"
 
-echo "Installing extensions..."
-for uuid in "${all_extensions[@]}"; do
-    ~/.local/bin/gext install "$uuid" --quiet 2>/dev/null
-done
-
-# --- 5. FORCED ENABLE LOGIC ---
-# Waiting 2 seconds ensures the system registry is ready for updates
-echo "Waiting for D-Bus synchronization..."
+echo "Sincronizando activación..."
 sleep 2
-
-ACTIVE_LIST="['add-to-desktop@tommimon.github.com', 'logowidget@github.com.howbea', 'desktop-widgets@NiffirgkcaJ.github.com', 'caffeine@patapon.info', 'dash-to-panel@jderose9.github.com', 'ding@rastersoft.com', 'GPaste@gnome-shell-extensions.gnome.org', 'hibernate-status@dromi', 'drive-menu@gnome-shell-extensions.gcampax.github.com', 'system-monitor@gnome-shell-extensions.gcampax.github.com', 'tiling-assistant@leleat-on-github', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'vertical-workspaces@G-dH.github.com']"
-
-# Force the settings into the user session
 gsettings set org.gnome.shell disable-user-extensions false
 gsettings set org.gnome.shell enabled-extensions "$ACTIVE_LIST"
 gsettings set org.gnome.shell.extensions.user-theme name "$THEME_NAME"
 
-# --- 6. GRUB ---
+# --- 7. GRUB ---
 sudo sed -i 's/^#\?GRUB_TERMINAL=.*/GRUB_TERMINAL=console/' /etc/default/grub
 sudo update-grub
 
 echo "-------------------------------------------------------"
-echo "Done! Please log out and back in manually to activate."
+echo "¡Hecho! Se han instalado todas tus favoritas."
+echo "REINICIA LA SESIÓN PARA VER LOS CAMBIOS."
 echo "-------------------------------------------------------"
