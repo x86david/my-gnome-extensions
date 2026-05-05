@@ -18,7 +18,6 @@ sudo apt update && sudo apt install -y \
     gnome-shell-extension-tiling-assistant \
     gnome-shell-extensions \
     gnome-shell-extension-manager \
-    pipx dbus-x11
 
 # Nota: 'gnome-shell-extensions' incluye: window-list, drive-menu y user-theme.
 
