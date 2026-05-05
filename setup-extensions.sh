@@ -1,71 +1,91 @@
 #!/bin/bash
 
-# --- 1. LIMPIEZA INICIAL ---
-echo "Limpiando entorno para una instalación nueva..."
-rm -rf "$HOME/.local/share/gnome-shell/extensions/*"
-gsettings reset org.gnome.shell enabled-extensions
+echo "=== Instalando extensiones GNOME desde APT ==="
 
-# --- 2. INSTALACIÓN POR APT (EXTENSIONES DE SISTEMA) ---
-# Instalamos las versiones estables de Debian 13
-echo "Instalando extensiones de sistema y dependencias..."
-sudo apt update && sudo apt install -y \
-    gnome-shell-extension-caffeine \
-    gnome-shell-extension-dashtodock \
-    gnome-shell-extension-dash-to-panel \
-    gnome-shell-extension-desktop-icons-ng \
-    gnome-shell-extension-gpaste \
-    gnome-shell-extension-system-monitor \
-    gnome-shell-extension-tiling-assistant \
-    gnome-shell-extensions \
-    gnome-shell-extension-manager \
+sudo apt update
 
-# Nota: 'gnome-shell-extensions' incluye: window-list, drive-menu y user-theme.
+sudo apt install -y \
+gnome-shell-extension-appindicator \
+gnome-shell-extension-apps-menu \
+gnome-shell-extension-arc-menu \
+gnome-shell-extension-auto-move-windows \
+gnome-shell-extension-blur-my-shell \
+gnome-shell-extension-caffeine \
+gnome-shell-extension-dash-to-panel \
+gnome-shell-extension-dashtodock \
+gnome-shell-extension-desktop-icons-ng \
+gnome-shell-extension-drive-menu \
+gnome-shell-extension-gpaste \
+gnome-shell-extension-gsconnect \
+gnome-shell-extension-launch-new-instance \
+gnome-shell-extension-light-style \
+gnome-shell-extension-native-window-placement \
+gnome-shell-extension-places-menu \
+gnome-shell-extension-prefs \
+gnome-shell-extension-screenshot-window-sizer \
+gnome-shell-extension-system-monitor \
+gnome-shell-extension-tiling-assistant \
+gnome-shell-extension-user-theme \
+gnome-shell-extension-window-list \
+gnome-shell-extension-windows-navigator \
+gnome-shell-extension-workspace-indicator \
+gnome-shell-extensions-common \
+gnome-shell-extensions-extra \
+gnome-shell-extensions \
+gir1.2-gnomedesktop-3.0 \
+gir1.2-gnomedesktop-4.0
 
-# --- 3. CONFIGURACIÓN DE HERRAMIENTA CLI ---
-# Para instalar las extensiones de usuario (Third Party)
-pipx install gnome-extensions-cli --system-site-packages --force
-export PATH="$PATH:$HOME/.local/bin"
+echo "=== Instalando extensiones locales ==="
 
-# --- 4. INSTALACIÓN DE EXTENSIONES DE USUARIO (CLI) ---
-user_extensions=(
-    "add-to-desktop@://github.com"
-    "logowidget@github.com.howbea"
-    "desktop-widgets@://github.com"
-    "hibernate-status@dromi"
-    "vertical-workspaces@://github.com"
+LOCAL_DIR="$HOME/.local/share/gnome-shell/extensions"
+
+mkdir -p "$LOCAL_DIR"
+
+# Lista de extensiones locales detectadas
+EXT_LOCAL=(
+"add-to-desktop@tommimon.github.com"
+"desktop-widgets@NiffirgkcaJ.github.com"
+"azclock@azclock.gitlab.com"
+"logowidget@github.com.howbea"
 )
 
-echo "Instalando extensiones de usuario desde la web..."
-for uuid in "${user_extensions[@]}"; do
-    ~/.local/bin/gext install "$uuid" --quiet 2>/dev/null
+for ext in "${EXT_LOCAL[@]}"; do
+    if [ -d "$ext" ]; then
+        echo "Copiando $ext..."
+        cp -r "$ext" "$LOCAL_DIR/"
+    else
+        echo "No se encontró la carpeta local: $ext"
+    fi
 done
 
-# --- 5. ACTIVACIÓN DE LA LISTA ESPECÍFICA ---
-# Definimos exactamente las que quieres habilitar
-ACTIVE_LIST="[ \
-'caffeine@patapon.info', \
-'dash-to-dock@://gmail.com', \
-'dash-to-panel@://github.com', \
-'ding@rastersoft.com', \
-'gpaste@gnome-shell-extensions.gnome.org', \
-'hibernate-status@dromi', \
-'drive-menu@://github.com', \
-'system-monitor@://github.com', \
-'tiling-assistant@leleat-on-github', \
-'user-theme@://github.com', \
-'vertical-workspaces@://github.com', \
-'window-list@://github.com', \
-'add-to-desktop@://github.com', \
-'logowidget@github.com.howbea', \
-'desktop-widgets@://github.com' \
-]"
+echo "=== Habilitando extensiones ==="
 
-echo "Activando extensiones..."
-sleep 2 # Pausa para que el sistema reconozca las carpetas nuevas
-gsettings set org.gnome.shell disable-user-extensions false
-gsettings set org.gnome.shell enabled-extensions "$ACTIVE_LIST"
+EXT_ENABLED=(
+"desktop-widgets@NiffirgkcaJ.github.com"
+"add-to-desktop@tommimon.github.com"
+"logowidget@github.com.howbea"
+"caffeine@patapon.info"
+"dash-to-panel@jderose9.github.com"
+"ding@rastersoft.com"
+"GPaste@gnome-shell-extensions.gnome.org"
+"system-monitor@gnome-shell-extensions.gcampax.github.com"
+"tiling-assistant@leleat-on-github"
+"hibernate-status@dromi"
+"vertical-workspaces@G-dH.github.com"
+"drive-menu@gnome-shell-extensions.gcampax.github.com"
+"user-theme@gnome-shell-extensions.gcampax.github.com"
+)
 
-echo "-------------------------------------------------------"
-echo "¡Instalación completada!"
-echo "RECUERDA: Debes reiniciar la sesión para que todo cargue."
-echo "-------------------------------------------------------"
+for ext in "${EXT_ENABLED[@]}"; do
+    echo "Habilitando $ext..."
+    gnome-extensions enable "$ext" 2>/dev/null
+done
+
+echo "=== Proceso completado ==="
+
+if [ "$XDG_SESSION_TYPE" = "x11" ]; then
+    echo "Reiniciando GNOME Shell (Xorg)..."
+    echo "Presiona ALT+F2, escribe r y pulsa Enter"
+else
+    echo "En Wayland debes cerrar sesión para aplicar cambios."
+fi
