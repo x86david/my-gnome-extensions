@@ -5,48 +5,34 @@ echo "=== Instalando extensiones GNOME desde APT ==="
 sudo apt update
 
 sudo apt install -y \
-gnome-shell-extension-appindicator \
-gnome-shell-extension-apps-menu \
-gnome-shell-extension-arc-menu \
-gnome-shell-extension-auto-move-windows \
-gnome-shell-extension-blur-my-shell \
 gnome-shell-extension-caffeine \
 gnome-shell-extension-dash-to-panel \
 gnome-shell-extension-dashtodock \
 gnome-shell-extension-desktop-icons-ng \
-gnome-shell-extension-drive-menu \
 gnome-shell-extension-gpaste \
-gnome-shell-extension-gsconnect \
-gnome-shell-extension-launch-new-instance \
-gnome-shell-extension-light-style \
-gnome-shell-extension-native-window-placement \
-gnome-shell-extension-places-menu \
 gnome-shell-extension-prefs \
-gnome-shell-extension-screenshot-window-sizer \
 gnome-shell-extension-system-monitor \
 gnome-shell-extension-tiling-assistant \
-gnome-shell-extension-user-theme \
-gnome-shell-extension-window-list \
-gnome-shell-extension-windows-navigator \
-gnome-shell-extension-workspace-indicator \
 gnome-shell-extensions-common \
 gnome-shell-extensions-extra \
 gnome-shell-extensions \
-gir1.2-gnomedesktop-3.0 \
-gir1.2-gnomedesktop-4.0
+gir1.2-gnomedesktop-4.0 \
+gpaste-2 \
+gnome-shell-extension-manager
 
-echo "=== Instalando extensiones locales ==="
+echo "=== Creando carpeta de extensiones de usuario ==="
 
 LOCAL_DIR="$HOME/.local/share/gnome-shell/extensions"
 
 mkdir -p "$LOCAL_DIR"
 
-# Lista de extensiones locales detectadas
+echo "=== Instalando extensiones locales (usuario) ==="
+
 EXT_LOCAL=(
 "add-to-desktop@tommimon.github.com"
 "desktop-widgets@NiffirgkcaJ.github.com"
-"azclock@azclock.gitlab.com"
 "logowidget@github.com.howbea"
+"azclock@azclock.gitlab.com"
 )
 
 for ext in "${EXT_LOCAL[@]}"; do
@@ -72,7 +58,6 @@ EXT_ENABLED=(
 "tiling-assistant@leleat-on-github"
 "hibernate-status@dromi"
 "vertical-workspaces@G-dH.github.com"
-"drive-menu@gnome-shell-extensions.gcampax.github.com"
 "user-theme@gnome-shell-extensions.gcampax.github.com"
 )
 
