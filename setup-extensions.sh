@@ -49,34 +49,32 @@ while IFS=: read -r user _ uid _ _ home shell; do
 
 done < /etc/passwd
 
-echo "=== Habilitando extensiones EXACTAS del preset para todos los usuarios existentes ==="
+echo "=== Habilitando extensiones para usuarios existentes ==="
 
-EXT_ENABLED=(
-  "drive-menu@gnome-shell-extensions.gcampax.github.com"
-  "gpaste@gnome-shell-extensions.gnome.org"
-  "user-theme@gnome-shell-extensions.gcampax.github.com"
-  "caffeine@patapon.info"
-  "dash-to-panel@jderose9.github.com"
-  "ding@rastersoft.com"
-  "system-monitor@gnome-shell-extensions.gcampax.github.com"
-  "tiling-assistant@leleat-on-github"
-  "hibernate-status@dromi"
-  "vertical-workspaces@G-dH.github.com"
-  "desktop-widgets@NiffirgkcaJ.github.com"
-  "add-to-desktop@tommimon.github.com"
-  "logowidget@github.com.howbea"
-)
+# Lista en formato dconf
+EXT_LIST="[
+  'drive-menu@gnome-shell-extensions.gcampax.github.com',
+  'gpaste@gnome-shell-extensions.gnome.org',
+  'user-theme@gnome-shell-extensions.gcampax.github.com',
+  'caffeine@patapon.info',
+  'dash-to-panel@jderose9.github.com',
+  'ding@rastersoft.com',
+  'system-monitor@gnome-shell-extensions.gcampax.github.com',
+  'tiling-assistant@leleat-on-github',
+  'hibernate-status@dromi',
+  'vertical-workspaces@G-dH.github.com',
+  'desktop-widgets@NiffirgkcaJ.github.com',
+  'add-to-desktop@tommimon.github.com',
+  'logowidget@github.com.howbea'
+]"
 
 while IFS=: read -r user _ uid _ _ home shell; do
   [ "$uid" -ge 1000 ] || continue
   [ -d "$home" ] || continue
 
-  echo "→ Habilitando extensiones para $user"
+  echo "→ Forzando extensiones para $user"
 
-  for ext in "${EXT_ENABLED[@]}"; do
-      sudo -u "$user" gnome-extensions enable "$ext" 2>/dev/null || \
-      echo "No se pudo habilitar $ext para $user"
-  done
+  sudo -u "$user" dbus-launch dconf write /org/gnome/shell/enabled-extensions "$EXT_LIST" || true
 
 done < /etc/passwd
 
@@ -88,25 +86,24 @@ cat >/etc/profile.d/flexos-extensions.sh <<'EOF'
 FLAG="$HOME/.flexos_extensions_applied"
 
 if [ ! -f "$FLAG" ]; then
-    EXT_ENABLED=(
-      "drive-menu@gnome-shell-extensions.gcampax.github.com"
-      "gpaste@gnome-shell-extensions.gnome.org"
-      "user-theme@gnome-shell-extensions.gcampax.github.com"
-      "caffeine@patapon.info"
-      "dash-to-panel@jderose9.github.com"
-      "ding@rastersoft.com"
-      "system-monitor@gnome-shell-extensions.gcampax.github.com"
-      "tiling-assistant@leleat-on-github"
-      "hibernate-status@dromi"
-      "vertical-workspaces@G-dH.github.com"
-      "desktop-widgets@NiffirgkcaJ.github.com"
-      "add-to-desktop@tommimon.github.com"
-      "logowidget@github.com.howbea"
-    )
 
-    for ext in "${EXT_ENABLED[@]}"; do
-        gnome-extensions enable "$ext" 2>/dev/null
-    done
+    EXT_LIST="[
+      'drive-menu@gnome-shell-extensions.gcampax.github.com',
+      'gpaste@gnome-shell-extensions.gnome.org',
+      'user-theme@gnome-shell-extensions.gcampax.github.com',
+      'caffeine@patapon.info',
+      'dash-to-panel@jderose9.github.com',
+      'ding@rastersoft.com',
+      'system-monitor@gnome-shell-extensions.gcampax.github.com',
+      'tiling-assistant@leleat-on-github',
+      'hibernate-status@dromi',
+      'vertical-workspaces@G-dH.github.com',
+      'desktop-widgets@NiffirgkcaJ.github.com',
+      'add-to-desktop@tommimon.github.com',
+      'logowidget@github.com.howbea'
+    ]"
+
+    dconf write /org/gnome/shell/enabled-extensions "$EXT_LIST"
 
     touch "$FLAG"
 fi
