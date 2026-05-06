@@ -10,7 +10,6 @@ echo "=== [0] Actualizando sistema ==="
 apt update
 apt full-upgrade -y
 
-
 echo "=== [1] Instalando paquetes base (sudo, git, NetworkManager) ==="
 apt update
 apt install -y sudo git network-manager
@@ -40,7 +39,9 @@ apt install -y gnome-core
 
 echo "=== [5] Clonando repositorio my-gnome-extensions ==="
 
-REPO_DIR="/root/my-gnome-extensions"
+REPO_DIR="/usr/local/share/my-gnome-extensions"
+
+mkdir -p /usr/local/share
 
 if [ ! -d "$REPO_DIR" ]; then
   git clone https://github.com/x86david/my-gnome-extensions.git "$REPO_DIR"
@@ -48,6 +49,9 @@ else
   cd "$REPO_DIR"
   git pull
 fi
+
+# Permitir lectura y ejecución (solo en directorios) a todos los usuarios
+chmod -R a+rX "$REPO_DIR"
 
 cd "$REPO_DIR"
 
