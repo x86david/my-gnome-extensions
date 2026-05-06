@@ -69,7 +69,8 @@ plugins=(
 
 source \$ZSH/oh-my-zsh.sh
 
-PROMPT='%F{green}%n@%m%f:%F{blue}%~%f %# '
+# Prompt corregido: usuario normal → $, root → #
+PROMPT='%F{green}%n@%m%f:%F{blue}%~%f %(!.#.$) '
 
 autoload -Uz compinit
 compinit
@@ -118,7 +119,7 @@ plugins=(
 
 source \$ZSH/oh-my-zsh.sh
 
-PROMPT='%F{green}%n@%m%f:%F{blue}%~%f %# '
+PROMPT='%F{green}%n@%m%f:%F{blue}%~%f %(!.#.$) '
 
 autoload -Uz compinit
 compinit
