@@ -97,3 +97,4 @@ else
 fi
 
 echo "=== Bootstrap completado. Reinicia para entrar en GNOME. ==="
+reboot
