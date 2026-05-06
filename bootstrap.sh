@@ -80,7 +80,7 @@ done < /etc/passwd
 
 echo "=== [10] Installing first-login GNOME autostart script ==="
 
-cat >/etc/xdg/autostart/flexos-first-login.desktop <<EOF
+cat << 'EOF' > /etc/xdg/autostart/flexos-first-login.desktop
 [Desktop Entry]
 Type=Application
 Name=FlexOS First Login
@@ -89,7 +89,7 @@ X-GNOME-Autostart-enabled=true
 NoDisplay=true
 EOF
 
-cat >/usr/local/bin/flexos-first-login.sh <<'EOF'
+cat << 'EOF' > /usr/local/bin/flexos-first-login.sh
 #!/bin/bash
 
 FLAG="$HOME/.flexos_first_login_done"
