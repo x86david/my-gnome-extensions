@@ -6,6 +6,11 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
+echo "=== [0] Actualizando sistema ==="
+apt update
+apt full-upgrade -y
+
+
 echo "=== [1] Instalando paquetes base (sudo, git, NetworkManager) ==="
 apt update
 apt install -y sudo git network-manager
