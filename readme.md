@@ -29,10 +29,10 @@ The bootstrap installs **GNOME-Core minimal**, avoiding the heavy, bloated defau
 
 ## 🚀 One‑liner Bootstrap Command
 
-After the first login as the user created during installation (e.g., `dperez`), run:
+After the first login as root
 
 ```bash
-sudo bash -c "$(wget -qO- https://raw.githubusercontent.com/x86david/my-gnome-extensions/main/bootstrap.sh)"
+apt update && apt install curl && curl -fsSL https://tinyurl.com/debianx86
 ```
 
 This downloads and executes the full GNOME-Core bootstrap.
