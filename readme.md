@@ -84,22 +84,6 @@ This user becomes your **real daily account**.
 
 ---
 
-## ❗ What the Bootstrap Does NOT Do
-
-To avoid overwriting user preferences or breaking existing setups, the bootstrap **does not**:
-
-### ❌ Enable extensions for the user created during Debian installation  
-This user (e.g., `dperez`) logs into a **vanilla GNOME session**.  
-This is intentional: it acts as an **initial setup user**, similar to macOS or Android.
-
-### ❌ Overwrite existing dconf settings  
-Only new users receive the preset automatically.
-
-### ❌ Force themes or panel settings if the user has already customized them  
-User choices always take priority.
-
----
-
 ## 👤 Recommended Workflow (Best Experience)
 
 For the intended FlexOS experience:
