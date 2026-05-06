@@ -1,5 +1,8 @@
 #!/bin/bash
 
+
+#USER INSTALLED EXTENSIONS: INSTALL MANUALLY = "ADD TO DESKTOP" "DESKTOP LOGO" "DESKTOP WIDGETS"
+
 echo "=== Instalando extensiones GNOME desde APT ==="
 
 sudo apt update
