@@ -13,6 +13,7 @@ gnome-shell-extension-gpaste \
 gnome-shell-extension-prefs \
 gnome-shell-extension-system-monitor \
 gnome-shell-extension-tiling-assistant \
+gnome-shell-extension-drive-menu \
 gnome-shell-extensions-common \
 gnome-shell-extensions-extra \
 gnome-shell-extensions \
@@ -59,6 +60,7 @@ EXT_ENABLED=(
 "hibernate-status@dromi"
 "vertical-workspaces@G-dH.github.com"
 "user-theme@gnome-shell-extensions.gcampax.github.com"
+"drive-menu@gnome-shell-extensions.gcampax.github.com"
 )
 
 for ext in "${EXT_ENABLED[@]}"; do
