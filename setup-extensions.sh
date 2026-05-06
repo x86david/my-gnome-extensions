@@ -49,7 +49,7 @@ while IFS=: read -r user _ uid _ _ home shell; do
 
 done < /etc/passwd
 
-echo "=== Habilitando extensiones EXACTAS del preset para todos los usuarios ==="
+echo "=== Habilitando extensiones EXACTAS del preset para todos los usuarios existentes ==="
 
 EXT_ENABLED=(
   "drive-menu@gnome-shell-extensions.gcampax.github.com"
@@ -79,6 +79,40 @@ while IFS=: read -r user _ uid _ _ home shell; do
   done
 
 done < /etc/passwd
+
+echo "=== Configurando extensiones por defecto para nuevos usuarios ==="
+
+cat >/etc/profile.d/flexos-extensions.sh <<'EOF'
+#!/bin/bash
+
+FLAG="$HOME/.flexos_extensions_applied"
+
+if [ ! -f "$FLAG" ]; then
+    EXT_ENABLED=(
+      "drive-menu@gnome-shell-extensions.gcampax.github.com"
+      "gpaste@gnome-shell-extensions.gnome.org"
+      "user-theme@gnome-shell-extensions.gcampax.github.com"
+      "caffeine@patapon.info"
+      "dash-to-panel@jderose9.github.com"
+      "ding@rastersoft.com"
+      "system-monitor@gnome-shell-extensions.gcampax.github.com"
+      "tiling-assistant@leleat-on-github"
+      "hibernate-status@dromi"
+      "vertical-workspaces@G-dH.github.com"
+      "desktop-widgets@NiffirgkcaJ.github.com"
+      "add-to-desktop@tommimon.github.com"
+      "logowidget@github.com.howbea"
+    )
+
+    for ext in "${EXT_ENABLED[@]}"; do
+        gnome-extensions enable "$ext" 2>/dev/null
+    done
+
+    touch "$FLAG"
+fi
+EOF
+
+chmod +x /etc/profile.d/flexos-extensions.sh
 
 echo "=== Proceso completado ==="
 
