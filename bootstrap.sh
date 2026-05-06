@@ -14,6 +14,17 @@ echo "=== [1] Instalando paquetes base (sudo, git, NetworkManager) ==="
 apt update
 apt install -y sudo git network-manager
 
+echo "=== [1.5] Añadiendo usuarios existentes al grupo sudo ==="
+
+while IFS=: read -r user _ uid _ _ home shell; do
+  # Solo usuarios reales (UID >= 1000) y que tengan home
+  [ "$uid" -ge 1000 ] || continue
+  [ -d "$home" ] || continue
+
+  echo "→ Añadiendo $user al grupo sudo"
+  usermod -aG sudo "$user" || true
+done < /etc/passwd
+
 echo "=== [2] Limpiando /etc/network/interfaces (solo loopback) ==="
 
 if [ -f /etc/network/interfaces ]; then
