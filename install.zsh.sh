@@ -30,12 +30,10 @@ sed -i 's#/usr/bin/zsh#/bin/bash#g; s#/bin/zsh#/bin/bash#g' /etc/passwd
 # 2. INSTALACIÓN DE ZSH
 ###############################################
 
-echo
-echo "¿A quién quieres instalar Zsh?"
-echo "1) Solo al usuario actual ($USER)"
-echo "2) Solo a root"
-echo "3) A TODOS los usuarios reales (UID >= 1000) + root"
-read -p "Elige una opción (1/2/3): " opt
+# Si no se pasa parámetro → opción 3 por defecto
+opt="${1:-3}"
+
+echo "[INFO] Modo automático: opción seleccionada = $opt"
 
 install_for_user() {
     local user="$1"
@@ -71,7 +69,6 @@ plugins=(
 
 source \$ZSH/oh-my-zsh.sh
 
-# Prompt profesional tipo bash
 PROMPT='%F{green}%n@%m%f:%F{blue}%~%f %# '
 
 autoload -Uz compinit
@@ -128,5 +125,4 @@ compinit
 EOF
 
 echo "✔ Nuevos usuarios tendrán Zsh configurado automáticamente."
-
-echo "✔ Instalación completada. Ejecuta: exec zsh"
+echo "✔ Instalación completada."
