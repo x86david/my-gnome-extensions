@@ -51,10 +51,7 @@ sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" gsettings set org.gno
 echo "⚙️  Step 6: Unlocking VPN profile (Global Autoconnect)..."
 nmcli connection modify "$VPN_NAME" connection.permissions "" connection.autoconnect yes
 
-echo "📝 Step 7: Installing Clean Dispatcher (Auto-Link Only)..."
-### CHANGED: Dispatcher now ONLY ensures WiFi auto-links to VPN.
-### REMOVED: All IPS bypasses, Microsoft exceptions, route manipulation.
-
+echo "📝 Step 7: Installing Clean Dispatcher (WiFi + Ethernet Auto-Link)..."
 cat << 'EOD' > /etc/NetworkManager/dispatcher.d/99-vpn-manager
 #!/bin/bash
 INTERFACE=$1
@@ -65,7 +62,9 @@ case "$ACTION" in
     up)
         if [ -n "$CONNECTION_UUID" ]; then
             TYPE=$(nmcli -g connection.type connection show "$CONNECTION_UUID")
-            if [ "$TYPE" = "802-11-wireless" ]; then
+
+            # WiFi + Ethernet support
+            if [ "$TYPE" = "802-11-wireless" ] || [ "$TYPE" = "802-3-ethernet" ]; then
                 nmcli connection modify "$CONNECTION_UUID" connection.secondaries "$VPN_UUID"
             fi
         fi
