@@ -10,8 +10,8 @@ echo "=== [0] Updating system ==="
 apt update
 apt full-upgrade -y
 
-echo "=== [1] Installing base packages (sudo, git, NetworkManager) ==="
-apt install -y sudo git network-manager
+echo "=== [1] Installing base packages (sudo, git, NetworkManager, dbus-x11) ==="
+apt install -y sudo git network-manager dbus-x11
 
 echo "=== [1.1] Configuring GRUB ==="
 # Overwriting /etc/default/grub with requested configuration
@@ -28,12 +28,19 @@ EOF
 # Update GRUB to apply changes
 update-grub
 
-echo "=== [1.5] Adding existing users to sudo group ==="
+echo "=== [1.5] Preparing users, sudo, and VPN directories ==="
 while IFS=: read -r user _ uid _ _ home shell; do
   [ "$uid" -ge 1000 ] || continue
   [ -d "$home" ] || continue
+  
   echo "→ Adding $user to sudo"
   usermod -aG sudo "$user" || true
+
+  # Pre-create the directory structure GNOME uses for VPN certs so permissions are set correctly
+  echo "📂 Fixing NetworkManager local paths for $user"
+  mkdir -p "$home/.local/share/networkmanagement/certificates/nm-openvpn"
+  chown -R "$user":"$user" "$home/.local"
+  chmod -R 700 "$home/.local/share/networkmanagement"
 done < /etc/passwd
 
 echo "=== [2] Cleaning /etc/network/interfaces (loopback only) ==="
@@ -78,8 +85,8 @@ chmod +x configure-vpn-autostart.sh
 echo "=== [7] Running setup-extensions.sh ==="
 ./setup-extensions.sh
 
-echo "=== [7.5] Running configure-vpn-autostart.sh ==="
-./configure-vpn-autostart.sh
+# NOTE: configure-vpn-autostart.sh is NOT run here because
+# it requires the user to import their .ovpn via GNOME first.
 
 echo "=== [8] Running install.zsh.sh (automatic mode) ==="
 ./install.zsh.sh
@@ -150,4 +157,6 @@ EOF
 chmod +x /usr/local/bin/flexos-first-login.sh
 
 echo "=== Bootstrap completed. Reboot to enter GNOME. ==="
+echo "REMINDER: After first login, import your .ovpn via GNOME Settings,"
+echo "then run /usr/local/share/my-gnome-extensions/configure-vpn-autostart.sh"
 reboot
