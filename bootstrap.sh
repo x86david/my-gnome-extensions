@@ -13,6 +13,21 @@ apt full-upgrade -y
 echo "=== [1] Installing base packages (sudo, git, NetworkManager) ==="
 apt install -y sudo git network-manager
 
+echo "=== [1.1] Configuring GRUB ==="
+# Overwriting /etc/default/grub with requested configuration
+cat << 'EOF' > /etc/default/grub
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR=`( . /etc/os-release && echo ${NAME} )`
+GRUB_CMDLINE_LINUX_DEFAULT="quiet"
+GRUB_CMDLINE_LINUX=""
+GRUB_DISABLE_OS_PROBER=false
+GRUB_TERMINAL=console
+EOF
+
+# Update GRUB to apply changes
+update-grub
+
 echo "=== [1.5] Adding existing users to sudo group ==="
 while IFS=: read -r user _ uid _ _ home shell; do
   [ "$uid" -ge 1000 ] || continue
@@ -58,9 +73,13 @@ cd "$REPO_DIR"
 echo "=== [6] Making scripts executable ==="
 chmod +x setup-extensions.sh
 chmod +x install.zsh.sh
+chmod +x configure-vpn-autostart.sh
 
 echo "=== [7] Running setup-extensions.sh ==="
 ./setup-extensions.sh
+
+echo "=== [7.5] Running configure-vpn-autostart.sh ==="
+./configure-vpn-autostart.sh
 
 echo "=== [8] Running install.zsh.sh (automatic mode) ==="
 ./install.zsh.sh
