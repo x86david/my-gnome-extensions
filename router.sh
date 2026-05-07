@@ -1,55 +1,84 @@
+cat << 'EOF' > privacy_master.sh
 #!/bin/bash
 
-echo "🕵️  Paso 1: Instalando Tor..."
-sudo apt update && sudo apt install -y tor
+# --- CONFIGURATION ---
+VPN_NAME="david"
+VPN_UUID=$(nmcli -g UUID connection show "$VPN_NAME" 2>/dev/null)
+PROXY_HOST="127.0.0.1"
+PROXY_PORT="9050"
+DNS_PORT="9053"
 
-echo "⚙️  Paso 2: Configurando Tor (DNSPort 9053)..."
-# Aseguramos que Tor escuche para DNS
-sudo bash -c "cat << 'EOF' > /etc/tor/torrc
-SocksPort 127.0.0.1:9050
-DNSPort 127.0.0.1:9053
-EOF"
+if [ -z "$VPN_UUID" ]; then
+    echo "❌ Error: VPN '$VPN_NAME' not found. Please import it first."
+    exit 1
+fi
+
+echo "🕵️  Step 1: Installing and Configuring Tor..."
+sudo apt update && sudo apt install -y tor iptables-persistent
+sudo bash -c "cat << 'EOT' > /etc/tor/torrc
+SocksPort $PROXY_HOST:$PROXY_PORT
+DNSPort $PROXY_HOST:$DNS_PORT
+EOT"
 sudo systemctl restart tor
 
-echo "🛡️  Paso 3: Configurando iptables (Redirección DNS)..."
-# Redirigir cualquier tráfico DNS saliente (puerto 53) hacia el puerto 9053 de Tor
-sudo iptables -t nat -F OUTPUT  # Limpiar reglas previas de OUTPUT nat
-sudo iptables -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports 9053
-sudo iptables -t nat -A OUTPUT -p tcp --dport 53 -j REDIRECT --to-ports 9053
-
-# Hacer las reglas de iptables persistentes
-sudo apt install -y iptables-persistent
+echo "🛡️  Step 2: Hijacking System DNS (Force through Tor)..."
+sudo iptables -t nat -F OUTPUT
+sudo iptables -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports $DNS_PORT
+sudo iptables -t nat -A OUTPUT -p tcp --dport 53 -j REDIRECT --to-ports $DNS_PORT
 sudo sh -c "iptables-save > /etc/iptables/rules.v4"
 
-echo "🌐 Paso 4: Forzando DNS Global en NetworkManager..."
-# Configuramos NM para que siempre pregunte a una IP (que interceptará iptables)
-sudo bash -c "cat << 'EOF' > /etc/NetworkManager/conf.d/99-global-dns.conf
-[main]
-dns=default
+echo "🔌 Step 3: Activating GNOME System Proxy (SOCKS5)..."
+gsettings set org.gnome.system.proxy.socks host "$PROXY_HOST"
+gsettings set org.gnome.system.proxy.socks port $PROXY_PORT
+gsettings set org.gnome.system.proxy mode 'manual'
 
-[global-dns-domain-*]
-servers=1.1.1.1
-EOF"
+echo "⚙️  Step 4: Automating VPN '$VPN_NAME'..."
+sudo nmcli connection modify "$VPN_NAME" connection.permissions "" connection.autoconnect yes
 
-echo "🔄 Paso 5: Reiniciando servicios..."
+echo "📝 Step 5: Installing the Intelligent Dispatcher (Copilot Bypass)..."
+sudo bash -c "cat << 'EOD' > /etc/NetworkManager/dispatcher.d/99-vpn-manager
+#!/bin/bash
+VPN_UUID=\"$VPN_UUID\"
+case \"\$2\" in
+    up)
+        # Auto-link new WiFi networks
+        if [ -n \"\$CONNECTION_UUID\" ]; then
+            TYPE=\$(nmcli -g connection.type connection show \"\$CONNECTION_UUID\")
+            if [ \"\$TYPE\" = \"802-11-wireless\" ]; then
+                SEC=\$(nmcli -g connection.secondaries connection show \"\$CONNECTION_UUID\" 2>/dev/null)
+                if [[ \"\$SEC\" != *\"\$VPN_UUID\"* ]]; then
+                    nmcli connection modify \"\$CONNECTION_UUID\" connection.secondaries \"\$VPN_UUID\"
+                    (sleep 2 && nmcli connection up \"\$CONNECTION_UUID\") &
+                fi
+            fi
+        fi
+        ;;
+    vpn-up)
+        # Force Copilot routes to bypass VPN/Proxy
+        GW=\$(ip route | grep default | grep -v tun | awk '{print \$3}' | head -n1)
+        DEV=\$(ip route | grep default | grep -v tun | awk '{print \$5}' | head -n1)
+        SUBNETS=(\"104.16.0.0/12\" \"172.64.0.0/13\" \"13.107.0.0/16\" \"150.171.0.0/16\")
+        if [ -n \"\$GW\" ] && [ -n \"\$DEV\" ]; then
+            for net in \"\${SUBNETS[@]}\"; do
+                ip route add \$net via \$GW dev \$DEV metric 5 2>/dev/null || \\
+                ip route replace \$net via \$GW dev \$DEV metric 5
+            done
+        fi
+        ;;
+esac
+EOD"
+sudo chmod +x /etc/NetworkManager/dispatcher.d/99-vpn-manager
+
+echo "🔄 Step 6: Restarting Network..."
 sudo systemctl restart NetworkManager
 sudo nmcli networking off && sleep 2 && sudo nmcli networking on
 
-echo "✅ SISTEMA DE PRIVACIDAD COMPLETADO."
-echo "Todo el DNS del sistema ahora sale por Tor (vía iptables)."
+echo "✅ ALL SYSTEMS ACTIVE."
+echo "1. Your DNS is forced through Tor (Always)."
+echo "2. Your GNOME Apps use Tor SOCKS proxy."
+echo "3. Your VPN starts automatically."
+echo "4. Copilot bypasses everything to stay unblocked."
+EOF
 
-
-
-echo "🔌 Paso 6: Configurando Proxy SOCKS5 de GNOME..."
-# 1. Establecer el host y el puerto para SOCKS
-gsettings set org.gnome.system.proxy.socks host '127.0.0.1'
-gsettings set org.gnome.system.proxy.socks port 9050
-
-# 2. Configurar el modo de proxy a 'manual' (esto lo activa)
-gsettings set org.gnome.system.proxy mode 'manual'
-
-# 3. (Opcional) Asegurar que el tráfico DNS de Firefox también vaya por el proxy
-# Esto modifica el perfil de Firefox si existe
-if [ -d "$HOME/.mozilla/firefox" ]; then
-    find "$HOME/.mozilla/firefox" -name "prefs.js" -exec sh -c "grep -q 'network.proxy.socks_remote_dns' '{}' || echo 'user_pref(\"network.proxy.socks_remote_dns\", true);' >> '{}'" \;
-fi
+chmod +x privacy_master.sh
+sudo ./privacy_master.sh
