@@ -37,3 +37,19 @@ sudo nmcli networking off && sleep 2 && sudo nmcli networking on
 
 echo "✅ SISTEMA DE PRIVACIDAD COMPLETADO."
 echo "Todo el DNS del sistema ahora sale por Tor (vía iptables)."
+
+
+
+echo "🔌 Paso 6: Configurando Proxy SOCKS5 de GNOME..."
+# 1. Establecer el host y el puerto para SOCKS
+gsettings set org.gnome.system.proxy.socks host '127.0.0.1'
+gsettings set org.gnome.system.proxy.socks port 9050
+
+# 2. Configurar el modo de proxy a 'manual' (esto lo activa)
+gsettings set org.gnome.system.proxy mode 'manual'
+
+# 3. (Opcional) Asegurar que el tráfico DNS de Firefox también vaya por el proxy
+# Esto modifica el perfil de Firefox si existe
+if [ -d "$HOME/.mozilla/firefox" ]; then
+    find "$HOME/.mozilla/firefox" -name "prefs.js" -exec sh -c "grep -q 'network.proxy.socks_remote_dns' '{}' || echo 'user_pref(\"network.proxy.socks_remote_dns\", true);' >> '{}'" \;
+fi
