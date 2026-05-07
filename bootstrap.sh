@@ -14,7 +14,6 @@ echo "=== [1] Installing base packages (sudo, git, NetworkManager, dbus-x11) ===
 apt install -y sudo git network-manager dbus-x11
 
 echo "=== [1.1] Configuring GRUB ==="
-# Overwriting /etc/default/grub with requested configuration
 cat << 'EOF' > /etc/default/grub
 GRUB_DEFAULT=0
 GRUB_TIMEOUT=5
@@ -25,7 +24,6 @@ GRUB_DISABLE_OS_PROBER=false
 GRUB_TERMINAL=console
 EOF
 
-# Update GRUB to apply changes
 update-grub
 
 echo "=== [1.5] Preparing users, sudo, and VPN directories ==="
@@ -36,7 +34,6 @@ while IFS=: read -r user _ uid _ _ home shell; do
   echo "→ Adding $user to sudo"
   usermod -aG sudo "$user" || true
 
-  # Pre-create the directory structure GNOME uses for VPN certs so permissions are set correctly
   echo "📂 Fixing NetworkManager local paths for $user"
   mkdir -p "$home/.local/share/networkmanagement/certificates/nm-openvpn"
   chown -R "$user":"$user" "$home/.local"
@@ -59,6 +56,9 @@ fi
 echo "=== [3] Enabling NetworkManager ==="
 systemctl enable NetworkManager
 systemctl restart NetworkManager
+
+echo "=== [3.1] Installing OpenVPN support for NetworkManager ==="   # ➜ NUEVO
+apt install -y network-manager-openvpn network-manager-openvpn-gnome   # ➜ NUEVO
 
 echo "=== [4] Installing GNOME minimal (gnome-core) ==="
 apt install -y gnome-core
@@ -84,9 +84,6 @@ chmod +x configure-vpn-autostart.sh
 
 echo "=== [7] Running setup-extensions.sh ==="
 ./setup-extensions.sh
-
-# NOTE: configure-vpn-autostart.sh is NOT run here because
-# it requires the user to import their .ovpn via GNOME first.
 
 echo "=== [8] Running install.zsh.sh (automatic mode) ==="
 ./install.zsh.sh
@@ -140,17 +137,13 @@ EXT_LIST="[
   'logowidget@github.com.howbea'
 ]"
 
-# Apply extensions
 dconf write /org/gnome/shell/enabled-extensions "$EXT_LIST"
 
-# Apply Dash-to-Panel config
 if [ -f "/usr/local/share/my-gnome-extensions/dash_to_panel.config" ]; then
     dconf load /org/gnome/shell/extensions/dash-to-panel/ < "/usr/local/share/my-gnome-extensions/dash_to_panel.config"
 fi
 
 touch "$FLAG"
-
-# Self-destruct
 rm -f /etc/xdg/autostart/flexos-first-login.desktop
 EOF
 
