@@ -1,4 +1,3 @@
-# 1. Crear el script completo
 cat << 'EOF' > fix_vpn_complete.sh
 #!/bin/bash
 
@@ -7,7 +6,7 @@ VPN_SEARCH="david"
 DNS_PORT="9053"
 SOCKS_PORT="9050"
 
-# Detectar el usuario real que lanzó el script (no root)
+# Detectar usuario real
 REAL_USER=${SUDO_USER:-$USER}
 USER_ID=$(id -u "$REAL_USER")
 
@@ -20,7 +19,7 @@ if [ -z "$VPN_UUID" ]; then
     exit 1
 fi
 
-echo "🕵️  Paso 1: Instalando dependencias (incluyendo dbus-x11)..."
+echo "🕵️  Paso 1: Instalando dependencias..."
 sudo apt update && sudo apt install -y tor iptables-persistent dbus-x11
 
 echo "⚙️  Paso 2: Configurando Tor..."
@@ -30,23 +29,23 @@ DNSPort 127.0.0.1:$DNS_PORT
 EOT"
 sudo systemctl restart tor
 
-echo "🛡️  Paso 3: Hijacking DNS (Redirección total)..."
+echo "🛡️  Paso 3: Hijacking DNS (iptables)..."
 sudo iptables -t nat -F OUTPUT
 sudo iptables -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports $DNS_PORT
 sudo iptables -t nat -A OUTPUT -p tcp --dport 53 -j REDIRECT --to-ports $DNS_PORT
 sudo sh -c "iptables-save > /etc/iptables/rules.v4"
 
 echo "🔌 Paso 4: Activando Proxy GNOME para $REAL_USER..."
-# Usamos sudo -u para ejecutar como tu usuario y DBUS_SESSION para encontrar su sesión
-# Esto evita el error "Failed to execute child process dbus-launch"
-sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$USER_ID/bus" gsettings set org.gnome.system.proxy.socks host '127.0.0.1'
-sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$USER_ID/bus" gsettings set org.gnome.system.proxy.socks port $SOCKS_PORT
-sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$USER_ID/bus" gsettings set org.gnome.system.proxy mode 'manual'
+# Forzamos la sesión de DBUS para evitar errores de "child process"
+DBUS_ADDR="unix:path=/run/user/$USER_ID/bus"
+sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" gsettings set org.gnome.system.proxy.socks host '127.0.0.1'
+sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" gsettings set org.gnome.system.proxy.socks port $SOCKS_PORT
+sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" gsettings set org.gnome.system.proxy mode 'manual'
 
 echo "⚙️  Paso 5: Configurando Autoconnect VPN..."
 sudo nmcli connection modify "$VPN_NAME" connection.permissions "" connection.autoconnect yes
 
-echo "📝 Paso 6: Instalando Dispatcher de Rutas (Copilot)..."
+echo "📝 Paso 6: Instalando Dispatcher de Rutas..."
 sudo bash -c "cat << 'EOD' > /etc/NetworkManager/dispatcher.d/99-vpn-manager
 #!/bin/bash
 INTERFACE=\$1
@@ -85,9 +84,8 @@ echo "🔄 Paso 7: Reiniciando red..."
 sudo systemctl restart NetworkManager
 sudo nmcli networking off && sleep 2 && sudo nmcli networking on
 
-echo "✅ CONFIGURACIÓN COMPLETADA SIN ERRORES."
+echo "✅ PROCESO FINALIZADO CON ÉXITO."
 EOF
 
-# 2. Ejecutar
 chmod +x fix_vpn_complete.sh
 sudo ./fix_vpn_complete.sh
