@@ -86,3 +86,6 @@ chmod +x /usr/local/bin/toggle-privacy
 
 echo "🛡️ Activando Hardened Mode por defecto..."
 /usr/local/bin/toggle-privacy hardened
+
+echo "🌐 Probando conexión a través del proxy..."
+curl -s http://ip-api.com/json | jq '.query, .country, .city, .proxy'
