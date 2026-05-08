@@ -36,7 +36,7 @@ systemctl enable NetworkManager
 systemctl restart NetworkManager
 
 echo "=== [6] Clonando repositorio de configuración ==="
-REPO_DIR="/usr/local/share/my-gnome-extensions"
+REPO_DIR="/usr/local/share/my-xfce-config"
 mkdir -p /usr/local/share
 if [ ! -d "$REPO_DIR" ]; then
   git clone https://github.com/x86david/my-gnome-extensions "$REPO_DIR"
@@ -48,21 +48,28 @@ chmod -R a+rX "$REPO_DIR"
 echo "=== [7] Configuración de GRUB ==="
 [ -f "$REPO_DIR/etc-grub-default" ] && cp "$REPO_DIR/etc-grub-default" /etc/default/grub && update-grub
 
-echo "=== [8] Hardening de Red (Tor Cage) ==="
+echo "=== [8] Preparando scripts del repositorio ==="
+chmod +x "$REPO_DIR/configure-proxy.sh" \
+          "$REPO_DIR/install.zsh.sh"
+
+echo "=== [9] Hardening de Red (Tor Cage) ==="
 cd "$REPO_DIR"
 ./configure-proxy.sh
+
+# Desactiva privacidad para continuar instalación con red normal
 /usr/local/bin/toggle-privacy off
 
+# Espera activa hasta que haya conexión
 echo "⏳ Esperando a que la red vuelva..."
 until ping -c1 deb.debian.org &>/dev/null; do
   sleep 2
 done
 echo "✅ Red online, continuando instalación."
 
-echo "=== [9] Instalando Zsh ==="
+echo "=== [10] Instalando Zsh ==="
 ./install.zsh.sh
 
-echo "=== [10] Configuración global de Firefox (System Proxy) ==="
+echo "=== [11] Configuración global de Firefox (System Proxy) ==="
 mkdir -p /etc/firefox-esr/
 cat << 'EOF' > /etc/firefox-esr/syspref.js
 pref("network.proxy.type", 5);
