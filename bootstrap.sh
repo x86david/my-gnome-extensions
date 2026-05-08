@@ -26,7 +26,7 @@ echo "=== [4] Clonando repositorio de configuración ==="
 REPO_DIR="/usr/local/share/my-gnome-extensions"
 mkdir -p /usr/local/share
 if [ ! -d "$REPO_DIR" ]; then
-  git clone https://github.com "$REPO_DIR"
+  git clone https://github.com/x86david/my-gnome-extensions "$REPO_DIR"
 else
   cd "$REPO_DIR" && git pull
 fi
