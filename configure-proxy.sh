@@ -2,6 +2,19 @@
 # configure-proxy.sh
 set -e
 
+# =================================================================
+# FLEXOS PROXY INFRASTRUCTURE SETUP
+# =================================================================
+# 1. TORRC: Sets up the triple-port listener (SOCKS, DNS, TRANSPROXY).
+# 2. BINARY: Creates /usr/local/bin/toggle-privacy for easy control.
+# 3. KERNEL: Uses iptables REDIRECT to capture packets before they hit the wire.
+# 4. UI: Synchronizes GNOME desktop settings with the firewall state.
+# 5. PERSISTENCE: Saves rules to /etc/iptables/rules.v4 to survive reboots.
+# =================================================================
+
+
+
+
 echo "⚙️  Configuring Torrc..."
 cat << 'EOF' > /etc/tor/torrc
 SocksPort 127.0.0.1:9050
