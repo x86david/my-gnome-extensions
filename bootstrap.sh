@@ -81,10 +81,29 @@ EOF
 
 cat << 'EOF' > /usr/local/bin/flexos-first-login.sh
 #!/bin/bash
+#!/bin/bash
 FLAG="$HOME/.flexos_first_login_done"
 [ -f "$FLAG" ] && exit 0
 
-EXT_LIST="['user-theme@gnome-shell-extensions.gcampax.github.com','dash-to-panel@jderose9.github.com']"
+EXT_LIST="[
+  'blur-my-shell@aunetx',
+  'lockscreen-extension@pratap.fastmail.fm',
+  'IP-Finder@linxgem33.com',
+  'desktop-widgets@NiffirgkcaJ.github.com',
+  'add-to-desktop@tommimon.github.com',
+  'burn-my-windows@schneegans.github.com',
+  'places-menu@gnome-shell-extensions.gcampax.github.com',
+  'drive-menu@gnome-shell-extensions.gcampax.github.com',
+  'GPaste@gnome-shell-extensions.gnome.org',
+  'caffeine@patapon.info',
+  'dash-to-panel@jderose9.github.com',
+  'ding@rastersoft.com',
+  'system-monitor@gnome-shell-extensions.gcampax.github.com',
+  'tiling-assistant@leleat-on-github',
+  'hibernate-status@dromi',
+  'user-theme@gnome-shell-extensions.gcampax.github.com'
+]"
+
 dconf write /org/gnome/shell/enabled-extensions "$EXT_LIST"
 
 if [ -f "/usr/local/share/my-gnome-extensions/dash_to_panel.config" ]; then
