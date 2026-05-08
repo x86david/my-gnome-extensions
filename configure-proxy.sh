@@ -14,7 +14,6 @@ systemctl restart tor
 echo "📝 Instalando toggle-privacy..."
 cat << 'EOF' > /usr/local/bin/toggle-privacy
 #!/bin/bash
-VPN_PORT="1194"
 DNS_PORT="9053"
 TRANS_PORT="9040"
 SOCKS_PORT="9050"
@@ -35,7 +34,6 @@ set_gnome_proxy() {
 
 case "$1" in
     hardened)
-        echo "🛡️ Hardened Mode..."
         iptables -F
         iptables -t nat -F
         iptables -P OUTPUT DROP
@@ -49,7 +47,6 @@ case "$1" in
         set_gnome_proxy "manual"
         ;;
     app)
-        echo "🔌 App Mode..."
         iptables -P OUTPUT ACCEPT
         iptables -F
         iptables -t nat -F
@@ -57,7 +54,6 @@ case "$1" in
         set_gnome_proxy "manual"
         ;;
     off)
-        echo "🔓 Privacy Off..."
         iptables -P OUTPUT ACCEPT
         iptables -F
         iptables -t nat -F
