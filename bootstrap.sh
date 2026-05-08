@@ -13,16 +13,15 @@ apt full-upgrade -y
 echo "=== [1] Installing base packages (sudo, git, NetworkManager, dbus-x11) ==="
 apt install -y sudo git network-manager dbus-x11
 
-echo "=== [1.1] Configuring GRUB from Repo ==="
-REPO_DIR="/usr/local/share/my-gnome-extensions"
-# We'll copy this after the git clone step below
-
-echo "=== [1.5] Adding existing users to sudo group ==="
+echo "=== [1.5] Preparing users, sudo, and VPN directories ==="
 while IFS=: read -r user _ uid _ _ home shell; do
   [ "$uid" -ge 1000 ] || continue
   [ -d "$home" ] || continue
   echo "→ Adding $user to sudo"
   usermod -aG sudo "$user" || true
+  mkdir -p "$home/.local/share/networkmanagement/certificates/nm-openvpn"
+  chown -R "$user":"$user" "$home/.local"
+  chmod -R 700 "$home/.local/share/networkmanagement"
 done < /etc/passwd
 
 echo "=== [2] Cleaning /etc/network/interfaces (loopback only) ==="
@@ -41,6 +40,7 @@ echo "=== [4] Installing GNOME minimal (gnome-core) ==="
 apt install -y gnome-core
 
 echo "=== [5] Cloning my-gnome-extensions repository ==="
+REPO_DIR="/usr/local/share/my-gnome-extensions"
 mkdir -p /usr/local/share
 if [ ! -d "$REPO_DIR" ]; then
   git clone https://github.com "$REPO_DIR"
@@ -55,24 +55,32 @@ if [ -f "$REPO_DIR/etc-grub-default" ]; then
   update-grub
 fi
 
-echo "=== [6] Running Privacy & Proxy Setup (configure-proxy.sh) ==="
+echo "=== [6] Making scripts executable ==="
 chmod +x "$REPO_DIR/configure-proxy.sh"
+chmod +x "$REPO_DIR/install-browser.sh"
+chmod +x "$REPO_DIR/setup-extensions.sh"
+chmod +x "$REPO_DIR/install.zsh.sh"
+
+echo "=== [7] Running Privacy & Proxy Setup (configure-proxy.sh) ==="
 cd "$REPO_DIR"
 ./configure-proxy.sh
 
-echo "=== [7] Running Extension & ZSH setup ==="
-chmod +x setup-extensions.sh
-chmod +x install.zsh.sh
+echo "=== [7.1] Installing Tor Browser (install-browser.sh) ==="
+./install-browser.sh
+
+echo "=== [7.2] Running Extension & ZSH setup ==="
 ./setup-extensions.sh
 ./install.zsh.sh
 
 echo "=== [8] Enforcing System-wide Firefox Privacy (Strict) ==="
+# Hardens the default Firefox ESR installation
 mkdir -p /etc/firefox-esr/
 cat << 'EOF' > /etc/firefox-esr/syspref.js
 // FLEXOS HARDENED FIREFOX SETTINGS
 pref("network.proxy.socks_remote_dns", true); 
 pref("network.trr.mode", 5);                  
 pref("browser.contentblocking.category", "strict"); 
+pref("privacy.trackingprotection.enabled", true);
 pref("privacy.resistFingerprinting", true);   
 pref("datareporting.healthreport.uploadEnabled", false); 
 EOF
@@ -99,11 +107,12 @@ NoDisplay=true
 EOF
 
 cat << 'EOF' > /usr/local/bin/flexos-first-login.sh
-#!/bin/bash
+#!/bash/sh
+# NOTE: Uses /bin/sh for broader compatibility in autostart
 FLAG="$HOME/.flexos_first_login_done"
 [ -f "$FLAG" ] && exit 0
 
-# Extensions list (Hardcoded from your README)
+# Extensions list from FlexOS Preset
 EXT_LIST="['drive-menu@://github.com','gpaste@gnome-shell-extensions.gnome.org','user-theme@://github.com','caffeine@patapon.info','dash-to-panel@://github.com','ding@rastersoft.com','system-monitor@://github.com','tiling-assistant@leleat-on-github','hibernate-status@dromi','vertical-workspaces@://github.com','desktop-widgets@://github.com','add-to-desktop@://github.com','logowidget@github.com.howbea']"
 
 dconf write /org/gnome/shell/enabled-extensions "$EXT_LIST"
@@ -112,7 +121,7 @@ if [ -f "/usr/local/share/my-gnome-extensions/dash_to_panel.config" ]; then
     dconf load /org/gnome/shell/extensions/dash-to-panel/ < "/usr/local/share/my-gnome-extensions/dash_to_panel.config"
 fi
 
-# Enable GNOME Manual Proxy via D-Bus session
+# Enable GNOME System Proxy via D-Bus session for the user
 USER_ID=$(id -u)
 DBUS_ADDR="unix:path=/run/user/$USER_ID/bus"
 DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" gsettings set org.gnome.system.proxy mode 'manual'
