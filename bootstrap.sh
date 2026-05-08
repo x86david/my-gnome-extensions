@@ -14,7 +14,6 @@ echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-
 echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
 
 echo "=== [2] Instalando stack estándar (GNOME + NetworkManager) ==="
-# Eliminamos systemd-resolved. Usamos lo que viene con gnome-core.
 apt install -y sudo git network-manager dbus-x11 network-manager-openvpn \
     network-manager-openvpn-gnome tor iptables-persistent gnome-core
 
@@ -26,7 +25,7 @@ echo "=== [4] Clonando repositorio de configuración ==="
 REPO_DIR="/usr/local/share/my-gnome-extensions"
 mkdir -p /usr/local/share
 if [ ! -d "$REPO_DIR" ]; then
-  git clone https://github.com/x86david/my-gnome-extensions "$REPO_DIR"
+  git clone https://github.com "$REPO_DIR"
 else
   cd "$REPO_DIR" && git pull
 fi
@@ -50,10 +49,12 @@ echo "=== [8] Instalando aplicaciones y extensiones ==="
 echo "=== [9] Configuración global de Firefox (System Proxy) ==="
 mkdir -p /etc/firefox-esr/
 cat << 'EOF' > /etc/firefox-esr/syspref.js
-pref("network.proxy.type", 5);                // Usa el proxy del sistema
-pref("network.proxy.socks_remote_dns", true); // DNS por Tor
-pref("network.trr.mode", 5);                  // Desactiva DoH
+// FLEXOS HARDENED FIREFOX SETTINGS
+pref("network.proxy.type", 5);                // Obedece al script toggle-privacy
+pref("network.proxy.socks_remote_dns", true); // DNS seguro por Tor
+pref("network.trr.mode", 5);                  // Desactivar DoH para evitar fugas
 pref("browser.contentblocking.category", "strict"); 
+pref("privacy.trackingprotection.enabled", true);
 pref("privacy.resistFingerprinting", true);   
 pref("datareporting.healthreport.uploadEnabled", false); 
 EOF
@@ -72,11 +73,10 @@ done < /etc/passwd
 
 echo "=== [11] Limpiando interfaces antiguas (dejando solo NM) ==="
 if [ -f /etc/network/interfaces ]; then
-  # Solo dejamos el loopback, el resto para NetworkManager
   echo -e "auto lo\niface lo inet loopback" > /etc/network/interfaces
 fi
 
-echo "=== [12] Configurando Script de inicio FlexOS ==="
+echo "=== [12] Instalando Script de inicio FlexOS ==="
 cat << 'EOF' > /etc/xdg/autostart/flexos-first-login.desktop
 [Desktop Entry]
 Type=Application
@@ -91,8 +91,8 @@ cat << 'EOF' > /usr/local/bin/flexos-first-login.sh
 FLAG="$HOME/.flexos_first_login_done"
 [ -f "$FLAG" ] && exit 0
 
-# Lista de extensiones corregida
-EXT_LIST="['drive-menu@://github.com','gpaste@gnome-shell-extensions.gnome.org','user-theme@://github.com','caffeine@patapon.info','dash-to-panel@://github.com','ding@rastersoft.com','system-monitor@://github.com','tiling-assistant@leleat-on-github','hibernate-status@dromi','vertical-workspaces@://github.com','desktop-widgets@://github.com','add-to-desktop@://github.com','logowidget@github.com.howbea']"
+# LISTA CORREGIDA CON IDs REALES (UUIDs)
+EXT_LIST="['drive-menu@gnome-shell-extensions.gcampax.github.com','gpaste@gnome-shell-extensions.gnome.org','user-theme@gnome-shell-extensions.gcampax.github.com','caffeine@patapon.info','dash-to-panel@jderose9.github.com','ding@rastersoft.com','system-monitor@gnome-shell-extensions.gcampax.github.com','tiling-assistant@leleat-on-github','hibernate-status@dromi','vertical-workspaces@G-dH.github.com','desktop-widgets@NiffirgkcaJ.github.com','add-to-desktop@tommimon.github.com','logowidget@github.com.howbea']"
 
 dconf write /org/gnome/shell/enabled-extensions "$EXT_LIST"
 
@@ -100,7 +100,7 @@ if [ -f "/usr/local/share/my-gnome-extensions/dash_to_panel.config" ]; then
     dconf load /org/gnome/shell/extensions/dash-to-panel/ < "/usr/local/share/my-gnome-extensions/dash_to_panel.config"
 fi
 
-# Sincronizamos GNOME Proxy con el estado 'hardened'
+# El proxy ya está activo por iptables, pero actualizamos el UI de GNOME
 USER_ID=$(id -u)
 export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$USER_ID/bus"
 gsettings set org.gnome.system.proxy mode 'manual'
