@@ -2,44 +2,28 @@
 set -e
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo "This script must be run as root."
+  echo "❌ This script must be run as root."
   exit 1
 fi
 
 echo "=== [0] Updating system ==="
-apt update
-apt full-upgrade -y
+apt update && apt full-upgrade -y
 
-echo "=== [1] Installing base packages (sudo, git, NetworkManager, dbus-x11) ==="
-apt install -y sudo git network-manager dbus-x11
+echo "=== [1] Pre-configuring non-interactive installs ==="
+# Prevents the purple/blue screen from freezing the bootstrap during iptables install
+echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
+echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
 
-echo "=== [1.5] Preparing users, sudo, and VPN directories ==="
-while IFS=: read -r user _ uid _ _ home shell; do
-  [ "$uid" -ge 1000 ] || continue
-  [ -d "$home" ] || continue
-  echo "→ Adding $user to sudo"
-  usermod -aG sudo "$user" || true
-  mkdir -p "$home/.local/share/networkmanagement/certificates/nm-openvpn"
-  chown -R "$user":"$user" "$home/.local"
-  chmod -R 700 "$home/.local/share/networkmanagement"
-done < /etc/passwd
+echo "=== [2] Installing base packages (GNOME, Tor, Networking) ==="
+apt install -y sudo git network-manager dbus-x11 network-manager-openvpn network-manager-openvpn-gnome tor iptables-persistent gnome-core
 
-echo "=== [2] Cleaning /etc/network/interfaces (loopback only) ==="
-if [ -f /etc/network/interfaces ]; then
-  cp /etc/network/interfaces /etc/network/interfaces.bak.$(date +%s)
-  awk '/^auto lo/ {print; next} /^iface lo/ {print; next} /^[[:space:]]*#/ {print; next} NF {print "# " $0; next} {print}' /etc/network/interfaces > /etc/network/interfaces.new
-  mv /etc/network/interfaces.new /etc/network/interfaces
-fi
+echo "=== [3] Configuring DNS & Systemd-Resolved ==="
+# Disable the local stub listener to prevent conflicts with our Tor DNS hijacking
+mkdir -p /etc/systemd/resolved.conf.d
+echo -e "[Resolve]\nDNSStubListener=no" > /etc/systemd/resolved.conf.d/no-stub.conf
+systemctl restart systemd-resolved
 
-echo "=== [3] Enabling NetworkManager & VPN Support ==="
-systemctl enable NetworkManager
-systemctl restart NetworkManager
-apt install -y network-manager-openvpn network-manager-openvpn-gnome
-
-echo "=== [4] Installing GNOME minimal (gnome-core) ==="
-apt install -y gnome-core
-
-echo "=== [5] Cloning my-gnome-extensions repository ==="
+echo "=== [4] Cloning my-gnome-extensions repository ==="
 REPO_DIR="/usr/local/share/my-gnome-extensions"
 mkdir -p /usr/local/share
 if [ ! -d "$REPO_DIR" ]; then
@@ -49,13 +33,13 @@ else
 fi
 chmod -R a+rX "$REPO_DIR"
 
-echo "=== [5.1] Applying GRUB config from repo ==="
+echo "=== [5] Applying GRUB config from repo ==="
 if [ -f "$REPO_DIR/etc-grub-default" ]; then
   cp "$REPO_DIR/etc-grub-default" /etc/default/grub
   update-grub
 fi
 
-echo "=== [6] Making scripts executable ==="
+echo "=== [6] Making repository scripts executable ==="
 chmod +x "$REPO_DIR/configure-proxy.sh"
 chmod +x "$REPO_DIR/install-browser.sh"
 chmod +x "$REPO_DIR/setup-extensions.sh"
@@ -65,27 +49,28 @@ echo "=== [7] Running Privacy & Proxy Setup (configure-proxy.sh) ==="
 cd "$REPO_DIR"
 ./configure-proxy.sh
 
-echo "=== [7.1] Installing Tor Browser (install-browser.sh) ==="
+echo "=== [8] Installing Tor Browser & Shell Tools ==="
 ./install-browser.sh
-
-echo "=== [7.2] Running Extension & ZSH setup ==="
 ./setup-extensions.sh
 ./install.zsh.sh
 
-echo "=== [8] Enforcing System-wide Firefox Privacy (Strict) ==="
-# Hardens the default Firefox ESR installation
+echo "=== [9] Enforcing System-wide Firefox Hardening (Strict) ==="
+# This forces all Firefox users to use Tor DNS and Strict Tracking protection
 mkdir -p /etc/firefox-esr/
 cat << 'EOF' > /etc/firefox-esr/syspref.js
 // FLEXOS HARDENED FIREFOX SETTINGS
-pref("network.proxy.socks_remote_dns", true); 
-pref("network.trr.mode", 5);                  
+pref("network.proxy.type", 1);                // Manual Proxy mode
+pref("network.proxy.socks", "127.0.0.1");
+pref("network.proxy.socks_port", 9050);
+pref("network.proxy.socks_remote_dns", true); // Force DNS through Tor
+pref("network.trr.mode", 5);                  // Disable DNS-over-HTTPS (leaks)
 pref("browser.contentblocking.category", "strict"); 
 pref("privacy.trackingprotection.enabled", true);
 pref("privacy.resistFingerprinting", true);   
 pref("datareporting.healthreport.uploadEnabled", false); 
 EOF
 
-echo "=== [9] Installing GNOME Shell theme for all users ==="
+echo "=== [10] Installing Theme for all users ==="
 THEME_SRC="$REPO_DIR/flat-remux-dark-fullpanel/gnome-shell"
 while IFS=: read -r user _ uid _ _ home shell; do
   [ "$uid" -ge 1000 ] || [ "$user" = "root" ] || continue
@@ -94,9 +79,16 @@ while IFS=: read -r user _ uid _ _ home shell; do
   mkdir -p "$THEME_DIR"
   cp -r "$THEME_SRC"/* "$THEME_DIR"/ 2>/dev/null || true
   chown -R "$user":"$user" "$home/.themes" 2>/dev/null || true
+  usermod -aG sudo "$user" || true
 done < /etc/passwd
 
-echo "=== [10] Installing first-login GNOME autostart script ==="
+echo "=== [11] Cleaning /etc/network/interfaces (loopback only) ==="
+if [ -f /etc/network/interfaces ]; then
+  awk '/^auto lo/ {print; next} /^iface lo/ {print; next} /^[[:space:]]*#/ {print; next} NF {print "# " $0; next} {print}' /etc/network/interfaces > /etc/network/interfaces.new
+  mv /etc/network/interfaces.new /etc/network/interfaces
+fi
+
+echo "=== [12] Installing first-login GNOME autostart script ==="
 cat << 'EOF' > /etc/xdg/autostart/flexos-first-login.desktop
 [Desktop Entry]
 Type=Application
@@ -107,12 +99,11 @@ NoDisplay=true
 EOF
 
 cat << 'EOF' > /usr/local/bin/flexos-first-login.sh
-#!/bash/sh
-# NOTE: Uses /bin/sh for broader compatibility in autostart
+#!/bin/bash
 FLAG="$HOME/.flexos_first_login_done"
 [ -f "$FLAG" ] && exit 0
 
-# Extensions list from FlexOS Preset
+# Extensions list for FlexOS
 EXT_LIST="['drive-menu@://github.com','gpaste@gnome-shell-extensions.gnome.org','user-theme@://github.com','caffeine@patapon.info','dash-to-panel@://github.com','ding@rastersoft.com','system-monitor@://github.com','tiling-assistant@leleat-on-github','hibernate-status@dromi','vertical-workspaces@://github.com','desktop-widgets@://github.com','add-to-desktop@://github.com','logowidget@github.com.howbea']"
 
 dconf write /org/gnome/shell/enabled-extensions "$EXT_LIST"
@@ -133,5 +124,5 @@ rm -f /etc/xdg/autostart/flexos-first-login.desktop
 EOF
 chmod +x /usr/local/bin/flexos-first-login.sh
 
-echo "=== Bootstrap completed. Rebooting to enter GNOME. ==="
+echo "=== Bootstrap completed. Rebooting to enter FlexOS. ==="
 reboot
