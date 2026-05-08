@@ -8,17 +8,16 @@ apt update
 apt install -y \
   gnome-shell-extension-caffeine \
   gnome-shell-extension-dash-to-panel \
-  gnome-shell-extension-dashtodock \
   gnome-shell-extension-desktop-icons-ng \
   gnome-shell-extension-gpaste \
   gnome-shell-extension-system-monitor \
   gnome-shell-extension-tiling-assistant \
   gnome-shell-extension-drive-menu \
+  gnome-shell-extension-places-menu \
   gnome-shell-extension-user-theme \
   gir1.2-gnomedesktop-4.0 \
   gnome-shell-extensions \
-  gpaste-2 \
-  gnome-shell-extension-manager
+  gpaste-2
 
 echo "=== Installing local extensions for each user ==="
 
@@ -27,10 +26,14 @@ EXT_LOCAL=(
   "desktop-widgets@NiffirgkcaJ.github.com"
   "logowidget@github.com.howbea"
   "azclock@azclock.gitlab.com"
+  "blur-my-shell@aunetx"
+  "burn-my-windows@schneegans.github.com"
+  "lockscreen-extension@pratap.fastmail.fm"
+  "IP-Finder@linxgem33.com"
+  "hibernate-status@dromi"
 )
 
 while IFS=: read -r user _ uid _ _ home shell; do
-  # Only real users (UID >= 1000)
   [ "$uid" -ge 1000 ] || continue
   [ -d "$home" ] || continue
 
