@@ -51,12 +51,10 @@ echo "=== [7] Configuración de GRUB ==="
 echo "=== [8] Preparando scripts del repositorio ==="
 chmod +x "$REPO_DIR/setup-extensions.sh" "$REPO_DIR/install.zsh.sh"
 
-
-
 echo "=== [10] Instalando extensiones y Zsh ==="
+cd "$REPO_DIR"
 ./setup-extensions.sh
 ./install.zsh.sh
-
 
 echo "=== [11] Instalando tema GNOME para todos los usuarios ==="
 THEME_SRC="$REPO_DIR/flat-remux-dark-fullpanel/gnome-shell"
@@ -80,7 +78,6 @@ NoDisplay=true
 EOF
 
 cat << 'EOF' > /usr/local/bin/flexos-first-login.sh
-#!/bin/bash
 #!/bin/bash
 FLAG="$HOME/.flexos_first_login_done"
 [ -f "$FLAG" ] && exit 0
@@ -113,6 +110,7 @@ fi
 touch "$FLAG"
 rm -f /etc/xdg/autostart/flexos-first-login.desktop
 EOF
+
 chmod +x /usr/local/bin/flexos-first-login.sh
 
 echo "=== Bootstrap finalizado. Reiniciando... ==="
