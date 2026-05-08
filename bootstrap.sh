@@ -49,23 +49,9 @@ echo "=== [7] Configuración de GRUB ==="
 [ -f "$REPO_DIR/etc-grub-default" ] && cp "$REPO_DIR/etc-grub-default" /etc/default/grub && update-grub
 
 echo "=== [8] Preparando scripts del repositorio ==="
-chmod +x "$REPO_DIR/configure-proxy.sh" "$REPO_DIR/setup-extensions.sh" "$REPO_DIR/install.zsh.sh"
+chmod +x "$REPO_DIR/setup-extensions.sh" "$REPO_DIR/install.zsh.sh"
 
 
-
-echo "=== [9] Hardening de Red (Tor Cage) ==="
-cd "$REPO_DIR"
-./configure-proxy.sh
-
-# Desactiva privacidad para continuar instalación con red normal
-/usr/local/bin/toggle-privacy off
-
-# Espera activa hasta que haya conexión
-echo "⏳ Esperando a que la red vuelva..."
-until ping -c1 deb.debian.org &>/dev/null; do
-  sleep 2
-done
-echo "✅ Red online, continuando instalación."
 
 echo "=== [10] Instalando extensiones y Zsh ==="
 ./setup-extensions.sh
@@ -82,18 +68,6 @@ while IFS=: read -r user _ uid _ _ home shell; do
   cp -r "$THEME_SRC"/* "$THEME_DIR"/
   chown -R "$user":"$user" "$home/.themes"
 done < /etc/passwd
-
-echo "=== [12] Configuración global de Firefox (System Proxy) ==="
-mkdir -p /etc/firefox-esr/
-cat << 'EOF' > /etc/firefox-esr/syspref.js
-pref("network.proxy.type", 5);
-pref("network.proxy.socks_remote_dns", true);
-pref("network.trr.mode", 5);
-pref("browser.contentblocking.category", "strict");
-pref("privacy.trackingprotection.enabled", true);
-pref("privacy.resistFingerprinting", true);
-pref("datareporting.healthreport.uploadEnabled", false);
-EOF
 
 echo "=== [13] Instalando script de primer login GNOME ==="
 cat << 'EOF' > /etc/xdg/autostart/flexos-first-login.desktop
