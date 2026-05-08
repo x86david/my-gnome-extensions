@@ -51,15 +51,26 @@ echo "=== [7] Configuración de GRUB ==="
 echo "=== [8] Preparando scripts del repositorio ==="
 chmod +x "$REPO_DIR/configure-proxy.sh" "$REPO_DIR/setup-extensions.sh" "$REPO_DIR/install.zsh.sh"
 
+
+
 echo "=== [9] Hardening de Red (Tor Cage) ==="
 cd "$REPO_DIR"
 ./configure-proxy.sh
-sleep 5
-toggle-privacy off
+
+# Desactiva privacidad para continuar instalación con red normal
+/usr/local/bin/toggle-privacy off
+
+# Espera activa hasta que haya conexión
+echo "⏳ Esperando a que la red vuelva..."
+until ping -c1 deb.debian.org &>/dev/null; do
+  sleep 2
+done
+echo "✅ Red online, continuando instalación."
 
 echo "=== [10] Instalando extensiones y Zsh ==="
 ./setup-extensions.sh
 ./install.zsh.sh
+
 
 echo "=== [11] Instalando tema GNOME para todos los usuarios ==="
 THEME_SRC="$REPO_DIR/flat-remux-dark-fullpanel/gnome-shell"
