@@ -9,15 +9,15 @@ fi
 echo "=== [0] Actualizando sistema ==="
 apt update && apt full-upgrade -y
 
-echo "=== [1] Pre-configurando instalaciones no interactivas ==="
+echo "=== [1] Pre-configurando iptables-persistent ==="
 echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
 echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
 
-echo "=== [2] Instalando stack estándar (GNOME + NetworkManager) ==="
+echo "=== [2] Instalando stack estándar (GNOME + NetworkManager + Tor) ==="
 apt install -y sudo git network-manager dbus-x11 network-manager-openvpn \
-    network-manager-openvpn-gnome tor iptables-persistent gnome-core torbrowser-launcher
+    network-manager-openvpn-gnome tor iptables-persistent gnome-core
 
-echo "=== [3] Configurando NetworkManager como gestor único ==="
+echo "=== [3] Configurando NetworkManager ==="
 systemctl enable NetworkManager
 systemctl restart NetworkManager
 
@@ -48,7 +48,6 @@ echo "=== [8] Instalando extensiones ==="
 echo "=== [9] Configuración global de Firefox (System Proxy) ==="
 mkdir -p /etc/firefox-esr/
 cat << 'EOF' > /etc/firefox-esr/syspref.js
-// FLEXOS HARDENED FIREFOX SETTINGS
 pref("network.proxy.type", 5);
 pref("network.proxy.socks_remote_dns", true);
 pref("network.trr.mode", 5);
@@ -60,35 +59,6 @@ EOF
 
 echo "=== [10] Limpiando interfaces antiguas ==="
 echo -e "auto lo\niface lo inet loopback" > /etc/network/interfaces
-
-echo "=== [11] Instalando Script de inicio FlexOS ==="
-cat << 'EOF' > /etc/xdg/autostart/flexos-first-login.desktop
-[Desktop Entry]
-Type=Application
-Name=FlexOS First Login
-Exec=/usr/local/bin/flexos-first-login.sh
-X-GNOME-Autostart-enabled=true
-NoDisplay=true
-EOF
-
-cat << 'EOF' > /usr/local/bin/flexos-first-login.sh
-#!/bin/bash
-FLAG="$HOME/.flexos_first_login_done"
-[ -f "$FLAG" ] && exit 0
-
-EXT_LIST="['user-theme@gnome-shell-extensions.gcampax.github.com','dash-to-panel@jderose9.github.com']"
-dconf write /org/gnome/shell/enabled-extensions "$EXT_LIST"
-
-USER_ID=$(id -u)
-export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$USER_ID/bus"
-gsettings set org.gnome.system.proxy mode 'manual'
-gsettings set org.gnome.system.proxy.socks host '127.0.0.1'
-gsettings set org.gnome.system.proxy.socks port 9050
-
-touch "$FLAG"
-rm -f /etc/xdg/autostart/flexos-first-login.desktop
-EOF
-chmod +x /usr/local/bin/flexos-first-login.sh
 
 echo "=== Bootstrap finalizado. Reiniciando... ==="
 reboot
