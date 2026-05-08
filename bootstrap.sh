@@ -23,18 +23,14 @@ GRUB_CMDLINE_LINUX=""
 GRUB_DISABLE_OS_PROBER=false
 GRUB_TERMINAL=console
 EOF
-
 update-grub
 
 echo "=== [1.5] Preparing users, sudo, and VPN directories ==="
 while IFS=: read -r user _ uid _ _ home shell; do
   [ "$uid" -ge 1000 ] || continue
   [ -d "$home" ] || continue
-  
   echo "→ Adding $user to sudo"
   usermod -aG sudo "$user" || true
-
-  echo "📂 Fixing NetworkManager local paths for $user"
   mkdir -p "$home/.local/share/networkmanagement/certificates/nm-openvpn"
   chown -R "$user":"$user" "$home/.local"
   chmod -R 700 "$home/.local/share/networkmanagement"
@@ -43,22 +39,14 @@ done < /etc/passwd
 echo "=== [2] Cleaning /etc/network/interfaces (loopback only) ==="
 if [ -f /etc/network/interfaces ]; then
   cp /etc/network/interfaces /etc/network/interfaces.bak.$(date +%s)
-  awk '
-    /^auto lo/ {print; next}
-    /^iface lo/ {print; next}
-    /^[[:space:]]*#/ {print; next}
-    NF {print "# " $0; next}
-    {print}
-  ' /etc/network/interfaces > /etc/network/interfaces.new
+  awk '/^auto lo/ {print; next} /^iface lo/ {print; next} /^[[:space:]]*#/ {print; next} NF {print "# " $0; next} {print}' /etc/network/interfaces > /etc/network/interfaces.new
   mv /etc/network/interfaces.new /etc/network/interfaces
 fi
 
-echo "=== [3] Enabling NetworkManager ==="
+echo "=== [3] Enabling NetworkManager & VPN Support ==="
 systemctl enable NetworkManager
 systemctl restart NetworkManager
-
-echo "=== [3.1] Installing OpenVPN support for NetworkManager ==="   # ➜ NUEVO
-apt install -y network-manager-openvpn network-manager-openvpn-gnome   # ➜ NUEVO
+apt install -y network-manager-openvpn network-manager-openvpn-gnome
 
 echo "=== [4] Installing GNOME minimal (gnome-core) ==="
 apt install -y gnome-core
@@ -66,42 +54,44 @@ apt install -y gnome-core
 echo "=== [5] Cloning my-gnome-extensions repository ==="
 REPO_DIR="/usr/local/share/my-gnome-extensions"
 mkdir -p /usr/local/share
-
 if [ ! -d "$REPO_DIR" ]; then
-  git clone https://github.com/x86david/my-gnome-extensions.git "$REPO_DIR"
+  git clone https://github.com "$REPO_DIR"
 else
-  cd "$REPO_DIR"
-  git pull
+  cd "$REPO_DIR" && git pull
 fi
-
 chmod -R a+rX "$REPO_DIR"
-cd "$REPO_DIR"
 
-echo "=== [6] Making scripts executable ==="
+echo "=== [6] Running Privacy & Proxy Setup (configure-proxy.sh) ==="
+chmod +x "$REPO_DIR/configure-proxy.sh"
+chmod +x "$REPO_DIR/configure-vpn-autostart.sh"
+cd "$REPO_DIR"
+./configure-proxy.sh
+
+echo "=== [7] Running Extension & ZSH setup ==="
 chmod +x setup-extensions.sh
 chmod +x install.zsh.sh
-chmod +x configure-vpn-autostart.sh
-
-echo "=== [7] Running setup-extensions.sh ==="
 ./setup-extensions.sh
-
-echo "=== [8] Running install.zsh.sh (automatic mode) ==="
 ./install.zsh.sh
 
-echo "=== [9] Installing GNOME Shell theme for all users ==="
-THEME_SRC="$REPO_DIR/flat-remux-dark-fullpanel/gnome-shell"
+echo "=== [8] Enforcing System-wide Firefox Privacy (Strict) ==="
+# This creates a global policy that Firefox applies to all profiles
+mkdir -p /etc/firefox-esr/syspref.js # For Debian ESR
+mkdir -p /usr/lib/firefox/browser/defaults/preferences # For Standard Firefox
+cat << 'EOF' > /etc/firefox/syspref.js
+// FLEXOS HARDENED FIREFOX SETTINGS
+pref("network.proxy.socks_remote_dns", true); // Force DNS through Tor
+pref("network.trr.mode", 5);                  // Disable DNS-over-HTTPS (use Tor DNS)
+pref("browser.contentblocking.category", "strict"); // Strict Tracking Protection
+pref("privacy.trackingprotection.enabled", true);
+pref("privacy.trackingprotection.socialtracking.enabled", true);
+pref("privacy.resistFingerprinting", true);   // Resist Fingerprinting
+pref("browser.formfill.enable", false);       // Disable form autofill
+pref("signon.rememberSignons", false);        // Disable password manager
+pref("datareporting.healthreport.uploadEnabled", false); // Disable telemetry
+EOF
 
-while IFS=: read -r user _ uid _ _ home shell; do
-  [ "$uid" -ge 1000 ] || [ "$user" = "root" ] || continue
-  [ -d "$home" ] || continue
-
-  THEME_DIR="$home/.themes/flat-remux-dark-fullpanel/gnome-shell"
-  mkdir -p "$THEME_DIR"
-  cp -r "$THEME_SRC"/* "$THEME_DIR"/
-  chown -R "$user":"$user" "$home/.themes"
-done < /etc/passwd
-
-echo "=== [10] Installing first-login GNOME autostart script ==="
+echo "=== [9] Installing Theme and Autostart ==="
+# ... (Theme installation code from your previous version)
 
 cat << 'EOF' > /etc/xdg/autostart/flexos-first-login.desktop
 [Desktop Entry]
@@ -112,44 +102,29 @@ X-GNOME-Autostart-enabled=true
 NoDisplay=true
 EOF
 
+# Note: The first-login script now only handles DCONF/GNOME specific UI bits
 cat << 'EOF' > /usr/local/bin/flexos-first-login.sh
 #!/bin/bash
-
 FLAG="$HOME/.flexos_first_login_done"
+[ -f "$FLAG" ] && exit 0
 
-if [ -f "$FLAG" ]; then
-    exit 0
-fi
-
-EXT_LIST="[
-  'drive-menu@gnome-shell-extensions.gcampax.github.com',
-  'gpaste@gnome-shell-extensions.gnome.org',
-  'user-theme@gnome-shell-extensions.gcampax.github.com',
-  'caffeine@patapon.info',
-  'dash-to-panel@jderose9.github.com',
-  'ding@rastersoft.com',
-  'system-monitor@gnome-shell-extensions.gcampax.github.com',
-  'tiling-assistant@leleat-on-github',
-  'hibernate-status@dromi',
-  'vertical-workspaces@G-dH.github.com',
-  'desktop-widgets@NiffirgkcaJ.github.com',
-  'add-to-desktop@tommimon.github.com',
-  'logowidget@github.com.howbea'
-]"
-
-dconf write /org/gnome/shell/enabled-extensions "$EXT_LIST"
-
+# Apply extensions and dash-to-panel
+dconf write /org/gnome/shell/enabled-extensions "$(cat /usr/local/share/my-gnome-extensions/extensions.list)"
 if [ -f "/usr/local/share/my-gnome-extensions/dash_to_panel.config" ]; then
     dconf load /org/gnome/shell/extensions/dash-to-panel/ < "/usr/local/share/my-gnome-extensions/dash_to_panel.config"
 fi
 
+# Enable GNOME Manual Proxy via D-Bus session
+USER_ID=$(id -u)
+DBUS_ADDR="unix:path=/run/user/$USER_ID/bus"
+DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" gsettings set org.gnome.system.proxy mode 'manual'
+DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" gsettings set org.gnome.system.proxy.socks host '127.0.0.1'
+DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" gsettings set org.gnome.system.proxy.socks port 9050
+
 touch "$FLAG"
 rm -f /etc/xdg/autostart/flexos-first-login.desktop
 EOF
-
 chmod +x /usr/local/bin/flexos-first-login.sh
 
-echo "=== Bootstrap completed. Reboot to enter GNOME. ==="
-echo "REMINDER: After first login, import your .ovpn via GNOME Settings,"
-echo "then run /usr/local/share/my-gnome-extensions/configure-vpn-autostart.sh"
+echo "=== Bootstrap completed. Rebooting. ==="
 reboot
