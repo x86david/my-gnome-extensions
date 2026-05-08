@@ -55,7 +55,7 @@ echo "=== [9] Hardening de Red (Tor Cage) ==="
 cd "$REPO_DIR"
 ./configure-proxy.sh
 sleep 5
-toogle-privacy off
+toggle-privacy off
 
 echo "=== [10] Instalando extensiones y Zsh ==="
 ./setup-extensions.sh
