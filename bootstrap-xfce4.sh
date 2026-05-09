@@ -35,6 +35,8 @@ echo "=== [5] Configurando NetworkManager ==="
 systemctl enable NetworkManager
 systemctl restart NetworkManager
 
+sleep 10
+
 echo "=== [6] Clonando repositorio de configuración ==="
 REPO_DIR="/usr/local/share/my-xfce-config"
 mkdir -p /usr/local/share
