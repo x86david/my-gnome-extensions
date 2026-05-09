@@ -35,7 +35,36 @@ echo "=== [5] Configurando NetworkManager ==="
 systemctl enable NetworkManager
 systemctl restart NetworkManager
 
-sleep 10
+echo "[+] Esperando a que NetworkManager levante la interfaz…"
+
+# 1. Esperar link
+while ! nmcli device status | grep -q "connected"; do
+    echo " - Aún sin link…"
+    sleep 2
+done
+
+# 2. Esperar IP
+while ! nmcli -t -f IP4.ADDRESS device show | grep -q "IP4.ADDRESS"; do
+    echo " - Aún sin IP…"
+    sleep 2
+done
+
+# 3. Esperar conectividad básica
+echo "[+] Probando conectividad…"
+while ! ping -c1 -W1 1.1.1.1 >/dev/null 2>&1; do
+    echo " - Sin respuesta aún…"
+    sleep 2
+done
+
+# 4. Esperar a que DNS resuelva
+echo "[+] Probando resolución DNS…"
+while ! dig +short google.com @1.1.1.1 >/dev/null 2>&1; do
+    echo " - DNS aún no responde…"
+    sleep 2
+done
+
+echo "[✓] DNS resolviendo correctamente. Continuando…"
+
 
 echo "=== [6] Clonando repositorio de configuración ==="
 REPO_DIR="/usr/local/share/my-gnome-extensions"
